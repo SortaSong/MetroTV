@@ -589,7 +589,10 @@ private fun TvMenuRow(
             )
             .focusRequester(focusRequester)
             .onFocusChanged { if (it.isFocused) onFocused() }
-            .focusable()
+            // NOTE: clickable must come AFTER focusRequester/onFocusChanged so the
+            // single focus node it creates is the one attached to the requester.
+            // Do NOT add .focusable() here — clickable already provides focusability,
+            // and a separate .focusable() node would steal focus without click handling.
             .clickable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 16.dp),
         content = content,
