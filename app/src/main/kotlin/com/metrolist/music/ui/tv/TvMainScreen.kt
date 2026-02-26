@@ -54,6 +54,7 @@ import coil3.compose.AsyncImage
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.extensions.togglePlayPause
+import com.metrolist.music.ui.screens.settings.AccountSettings
 import com.metrolist.music.ui.screens.settings.NavigationTab
 import com.metrolist.music.ui.screens.Screens
 import com.metrolist.music.ui.screens.navigationBuilder
@@ -102,7 +103,7 @@ fun TvMainScreen(
             onNavItemClick = onNavItemClick,
             pureBlack = pureBlack,
             onSettingsClick = {
-                navController.navigate("account") { launchSingleTop = true }
+                navController.navigate("tv_settings") { launchSingleTop = true }
             },
             onPlayerClick = {
                 navController.navigate("tv_player") { launchSingleTop = true }
@@ -138,6 +139,20 @@ fun TvMainScreen(
                     // TV-only full-screen player route
                     composable("tv_player") {
                         TvPlayerScreen(navController = navController)
+                    }
+
+                    // TV-only queue screen
+                    composable("tv_queue") {
+                        TvQueueScreen(navController = navController)
+                    }
+
+                    // TV account/settings panel (shows login, sync, integrations, settings links)
+                    composable("tv_settings") {
+                        AccountSettings(
+                            navController = navController,
+                            onClose = { navController.navigateUp() },
+                            latestVersionName = latestVersionName,
+                        )
                     }
                 }
             }
@@ -281,7 +296,9 @@ private fun TvNavigationRail(
     val mediaMetadata by (playerConnection?.mediaMetadata?.collectAsState() ?: remember { androidx.compose.runtime.mutableStateOf(null) })
 
     val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
-    val isSettingsSelected = currentRoute?.startsWith("settings") == true
+    val isSettingsSelected = currentRoute == "tv_settings" ||
+        currentRoute?.startsWith("settings") == true ||
+        currentRoute?.startsWith("account") == true
     val isPlayerSelected = currentRoute == "tv_player"
 
     NavigationRail(containerColor = containerColor) {
