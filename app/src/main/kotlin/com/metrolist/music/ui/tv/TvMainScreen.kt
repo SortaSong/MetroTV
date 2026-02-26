@@ -150,7 +150,11 @@ fun TvMainScreen(
                     composable("tv_settings") {
                         AccountSettings(
                             navController = navController,
-                            onClose = { navController.navigateUp() },
+                            // onClose must be a no-op on TV: AccountSettings calls onClose() BEFORE
+                            // navigating to login/settings, so navigateUp() here would pop tv_settings
+                            // off the stack before the destination is added (back goes to home instead).
+                            // On TV, the user presses Back to return — no close button needed.
+                            onClose = {},
                             latestVersionName = latestVersionName,
                         )
                     }
