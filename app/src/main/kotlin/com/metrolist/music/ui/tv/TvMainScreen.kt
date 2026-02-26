@@ -419,7 +419,7 @@ private fun TvAccountMenu(navController: NavController, latestVersionName: Strin
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+            .background(MaterialTheme.colorScheme.surface) // Opaque background
             .padding(horizontal = 80.dp, vertical = 48.dp),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
