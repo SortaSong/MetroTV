@@ -19,7 +19,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.metrolist.music"
+        applicationId = "com.metrotv.music"
         minSdk = 26
         targetSdk = 36
         versionCode = 141

@@ -188,6 +188,8 @@ import com.metrolist.music.utils.rememberEnumPreference
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.utils.reportException
 import com.metrolist.music.utils.setAppLocale
+import com.metrolist.music.ui.tv.TvMainScreen
+import com.metrolist.music.ui.tv.isAndroidTv
 import com.metrolist.music.viewmodels.HomeViewModel
 import com.valentinilk.shimmer.LocalShimmerTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -340,6 +342,12 @@ class MainActivity : ComponentActivity() {
                         window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
                     }
                 }
+        }
+
+        // Keep screen on while the app is in the foreground on Android TV so the TV
+        // does not go to sleep during music playback.
+        if (isAndroidTv()) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
 
         setContent {
@@ -521,6 +529,7 @@ class MainActivity : ComponentActivity() {
                 val bottomInsetDp = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
                 val navController = rememberNavController()
+                val isTv = remember { isAndroidTv() }
 
                 LaunchedEffect(Unit) {
                     val lastSeenVersion = dataStore.data.first()[LastSeenVersionKey] ?: ""
@@ -800,6 +809,17 @@ class MainActivity : ComponentActivity() {
                         ChangelogScreen(onDismiss = { showChangelog.value = false })
                     }
 
+                    if (isTv) {
+                        TvMainScreen(
+                            navController = navController,
+                            navigationItems = navigationItems,
+                            pureBlack = pureBlack,
+                            defaultOpenTab = defaultOpenTab,
+                            tabOpenedFromShortcut = tabOpenedFromShortcut,
+                            latestVersionName = latestVersionName,
+                            snackbarHostState = snackbarHostState,
+                        )
+                    } else {
                     Scaffold(
                         snackbarHost = { SnackbarHost(snackbarHostState) },
                         topBar = {
@@ -1112,7 +1132,8 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
-                    }
+                    } // Scaffold (end else)
+                    } // end if isTv
 
                     BottomSheetMenu(
                         state = LocalMenuState.current,
