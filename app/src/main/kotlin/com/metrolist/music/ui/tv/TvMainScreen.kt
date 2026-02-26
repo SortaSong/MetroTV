@@ -28,6 +28,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -38,9 +40,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -50,7 +54,6 @@ import coil3.compose.AsyncImage
 import com.metrolist.music.LocalPlayerConnection
 import com.metrolist.music.R
 import com.metrolist.music.extensions.togglePlayPause
-import com.metrolist.music.ui.component.AppNavigationRail
 import com.metrolist.music.ui.screens.settings.NavigationTab
 import com.metrolist.music.ui.screens.Screens
 import com.metrolist.music.ui.screens.navigationBuilder
@@ -93,11 +96,17 @@ fun TvMainScreen(
 
     Row(modifier = Modifier.fillMaxSize()) {
         // ── Left navigation rail ──────────────────────────────────────────────
-        AppNavigationRail(
+        TvNavigationRail(
             navigationItems = navigationItems,
             currentRoute = currentRoute,
-            onItemClick = onNavItemClick,
+            onNavItemClick = onNavItemClick,
             pureBlack = pureBlack,
+            onSettingsClick = {
+                navController.navigate("account") { launchSingleTop = true }
+            },
+            onPlayerClick = {
+                navController.navigate("tv_player") { launchSingleTop = true }
+            },
         )
 
         // ── Main content area ─────────────────────────────────────────────────
@@ -251,5 +260,77 @@ private fun TvNowPlayingBar(
                 contentDescription = null,
             )
         }
+    }
+}
+
+/**
+ * TV-specific NavigationRail that adds Settings and Now-Playing items
+ * below the standard navigation items.
+ */
+@Composable
+private fun TvNavigationRail(
+    navigationItems: List<Screens>,
+    currentRoute: String?,
+    onNavItemClick: (Screens, Boolean) -> Unit,
+    pureBlack: Boolean,
+    onSettingsClick: () -> Unit,
+    onPlayerClick: () -> Unit,
+) {
+    val playerConnection = LocalPlayerConnection.current
+    val isPlaying by (playerConnection?.isPlaying?.collectAsState() ?: remember { androidx.compose.runtime.mutableStateOf(false) })
+    val mediaMetadata by (playerConnection?.mediaMetadata?.collectAsState() ?: remember { androidx.compose.runtime.mutableStateOf(null) })
+
+    val containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+    val isSettingsSelected = currentRoute?.startsWith("settings") == true
+    val isPlayerSelected = currentRoute == "tv_player"
+
+    NavigationRail(containerColor = containerColor) {
+        Spacer(Modifier.weight(1f))
+
+        // Standard nav items (Home, Search, Library, …)
+        navigationItems.forEach { screen ->
+            val isSelected = currentRoute == screen.route || currentRoute?.startsWith("${screen.route}/") == true
+            NavigationRailItem(
+                selected = isSelected,
+                onClick = { onNavItemClick(screen, isSelected) },
+                icon = {
+                    Icon(
+                        painter = painterResource(if (isSelected) screen.iconIdActive else screen.iconIdInactive),
+                        contentDescription = stringResource(screen.titleId),
+                    )
+                },
+                label = { Text(stringResource(screen.titleId), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            )
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        // Now-playing item — visible when something is loaded
+        if (mediaMetadata != null) {
+            NavigationRailItem(
+                selected = isPlayerSelected,
+                onClick = onPlayerClick,
+                icon = {
+                    Icon(
+                        painter = painterResource(if (isPlaying) R.drawable.pause else R.drawable.play),
+                        contentDescription = stringResource(R.string.queue),
+                    )
+                },
+                label = { Text(stringResource(R.string.queue), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            )
+        }
+
+        // Account/Settings item always visible at the bottom
+        NavigationRailItem(
+            selected = isSettingsSelected,
+            onClick = onSettingsClick,
+            icon = {
+                Icon(
+                    painter = painterResource(R.drawable.settings),
+                    contentDescription = stringResource(R.string.settings),
+                )
+            },
+            label = { Text(stringResource(R.string.settings), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        )
     }
 }
