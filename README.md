@@ -1,5 +1,5 @@
 <div align="center">
-<img src="https://github.com/MetrolistGroup/Metrolist/blob/main/fastlane/metadata/android/en-US/images/icon.png" width="160" height="160" style="display: block; margin: 0 auto"/>
+
 <h1>MetroTV</h1>
 <p>YouTube Music client optimized for Android TV</p>
 
@@ -20,6 +20,11 @@
 <div style="padding: 16px; margin: 16px 0; background-color: #FFFBE5; border-left: 6px solid #FFC107; border-radius: 4px; text-align: left;">
 <h3 style="margin: 0;"><strong>⚠ Warning</strong></h3>
 If you're in a region where YouTube Music is not supported, you won't be able to use this app <strong>unless</strong> you have a proxy or VPN to connect to a YTM-supported region.
+</div>
+
+<div style="padding: 16px; margin: 16px 0; background-color: #E8F5E9; border-left: 6px solid #4CAF50; border-radius: 4px; text-align: left;">
+<h3 style="margin: 0;"><strong>🖱️ Mouse Required for Login</strong></h3>
+While the main interface is fully optimized for TV remotes, the Google Login screen uses a web view that requires a <strong>mouse</strong> or air mouse to interact with. You can connect a USB mouse or use a remote app on your phone (like Google TV app) to complete the login process.
 </div>
 
 </div>
