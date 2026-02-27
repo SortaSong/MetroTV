@@ -59,6 +59,30 @@ import com.metrolist.music.R
  * Center (or click) selects a track and starts playback, then navigates back.
  * Back returns to the player.
  */
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.toMutableStateList
+import androidx.compose.ui.zIndex
+
+/**
+ * Full-screen queue view for Android TV with reorder and remove support.
+ *
+ * Each row has 3 focus zones:
+ * [Drag Handle] - [Track Info] - [Remove Button]
+ *
+ * Controls:
+ * - Left/Right: Navigate between zones in a row.
+ * - Up/Down: Navigate between rows.
+ * - Center on Drag Handle: Enters "Drag Mode".
+ *   - Up/Down in Drag Mode: Moves the item.
+ *   - Center/Back in Drag Mode: Exits Drag Mode.
+ * - Center on Track Info: Plays the track.
+ * - Center on Remove Button: Removes the track.
+ */
 @Composable
 fun TvQueueScreen(navController: NavController) {
     val playerConnection = LocalPlayerConnection.current ?: return
@@ -68,27 +92,21 @@ fun TvQueueScreen(navController: NavController) {
 
     val listState = rememberLazyListState()
 
-    // Track which item currently has focus so we can scroll to it.
-    var focusedIndex by remember { mutableIntStateOf(currentIndex.coerceIn(0, (currentQueue.size - 1).coerceAtLeast(0))) }
+    // -1 means no item is currently being dragged
+    var draggingIndex by remember { mutableIntStateOf(-1) }
 
-    // One FocusRequester per queue item.
-    val focusRequesters = remember(currentQueue.size) {
-        List(currentQueue.size) { FocusRequester() }
+    // Track which ROW currently has focus (to keep it visible)
+    var focusedRowIndex by remember { mutableIntStateOf(currentIndex.coerceIn(0, (currentQueue.size - 1).coerceAtLeast(0))) }
+
+    LaunchedEffect(focusedRowIndex) {
+        listState.animateScrollToItem(focusedRowIndex)
     }
 
-    // On entry: scroll to current track and focus it.
-    LaunchedEffect(currentIndex, currentQueue.size) {
+    // Scroll to current track on first load
+    LaunchedEffect(Unit) {
         val target = currentIndex.coerceIn(0, (currentQueue.size - 1).coerceAtLeast(0))
-        focusedIndex = target
+        focusedRowIndex = target
         listState.scrollToItem(target)
-        if (target in focusRequesters.indices) {
-            focusRequesters[target].requestFocus()
-        }
-    }
-
-    // Whenever focusedIndex changes, scroll the list to keep it visible.
-    LaunchedEffect(focusedIndex) {
-        listState.animateScrollToItem(focusedIndex)
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -103,7 +121,7 @@ fun TvQueueScreen(navController: NavController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 80.dp, vertical = 48.dp),
+                .padding(horizontal = 60.dp, vertical = 32.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -117,119 +135,259 @@ fun TvQueueScreen(navController: NavController) {
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    text = "Queue  (${currentQueue.size} tracks)",
+                    text = "Queue (${currentQueue.size})",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                 )
+                if (draggingIndex != -1) {
+                    Spacer(Modifier.width(24.dp))
+                    Text(
+                        text = "Move mode: Press Up/Down to move, Center to drop",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
             HorizontalDivider(color = Color.White.copy(alpha = 0.3f))
 
             LazyColumn(
                 state = listState,
-                // Disable the LazyColumn''s own scroll-on-keypress so D-pad moves focus instead.
-                userScrollEnabled = false,
+                // We handle key events manually for drag-and-drop
                 modifier = Modifier.fillMaxSize().padding(top = 8.dp),
             ) {
-                itemsIndexed(currentQueue) { idx, window ->
+                itemsIndexed(
+                    items = currentQueue,
+                    key = { _, window -> window.uid.hashCode() }
+                ) { idx, window ->
                     val isCurrent = window.firstPeriodIndex == currentIndex
-                    val isFocused = focusedIndex == idx
-                    val title = window.mediaItem.mediaMetadata.title?.toString() ?: ""
-                    val artist = window.mediaItem.mediaMetadata.artist?.toString() ?: ""
-                    val thumbnailUri = window.mediaItem.mediaMetadata.artworkUri
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 2.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                when {
-                                    isFocused -> MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                                    isCurrent -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                                    else -> Color.Transparent
-                                }
-                            )
-                            .focusRequester(focusRequesters[idx])
-                            .onFocusChanged { if (it.isFocused) focusedIndex = idx }
-                            .focusable()
-                            // D-pad key handling: up/down moves focus; center selects
-                            .onKeyEvent { keyEvent ->
-                                if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
-                                when (keyEvent.nativeKeyEvent.keyCode) {
-                                    KeyEvent.KEYCODE_DPAD_UP -> {
-                                        val prev = idx - 1
-                                        if (prev >= 0) focusRequesters[prev].requestFocus()
-                                        true
-                                    }
-                                    KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                        val next = idx + 1
-                                        if (next < focusRequesters.size) focusRequesters[next].requestFocus()
-                                        true
-                                    }
-                                    KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                                        playerConnection.player.seekToDefaultPosition(idx)
-                                        navController.navigateUp()
-                                        true
-                                    }
-                                    else -> false
-                                }
+                    val isDragging = (draggingIndex == idx)
+                    
+                    TvQueueItem(
+                        index = idx,
+                        window = window,
+                        isCurrent = isCurrent,
+                        isDragging = isDragging,
+                        totalItems = currentQueue.size,
+                        onPlay = {
+                            playerConnection.player.seekToDefaultPosition(idx)
+                            navController.navigateUp()
+                        },
+                        onEnterDrag = { draggingIndex = idx },
+                        onExitDrag = { draggingIndex = -1 },
+                        onMove = { from, to ->
+                            playerConnection.player.moveMediaItem(from, to)
+                            // Update dragging index to follow the item
+                            draggingIndex = to
+                            focusedRowIndex = to
+                        },
+                        onRemove = {
+                            playerConnection.player.removeMediaItem(idx)
+                            // If we removed the item we were on, ensure focus stays valid
+                            if (focusedRowIndex >= currentQueue.size - 1) {
+                                focusedRowIndex = (currentQueue.size - 2).coerceAtLeast(0)
                             }
-                            .clickable {
-                                playerConnection.player.seekToDefaultPosition(idx)
-                                navController.navigateUp()
-                            }
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                    ) {
-                        Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
-                            if (isCurrent) {
-                                Icon(
-                                    painter = painterResource(R.drawable.music_note),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            } else {
-                                Text(
-                                    text = "${idx + 1}",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = Color.White.copy(alpha = 0.5f),
-                                )
-                            }
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        if (thumbnailUri != null) {
-                            AsyncImage(
-                                model = thumbnailUri,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp)),
-                            )
-                            Spacer(Modifier.width(12.dp))
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.White,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            if (artist.isNotEmpty()) {
-                                Text(
-                                    text = artist,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.6f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
-                    }
+                        },
+                        onFocused = { focusedRowIndex = idx }
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun TvQueueItem(
+    index: Int,
+    window: androidx.media3.common.Timeline.Window,
+    isCurrent: Boolean,
+    isDragging: Boolean,
+    totalItems: Int,
+    onPlay: () -> Unit,
+    onEnterDrag: () -> Unit,
+    onExitDrag: () -> Unit,
+    onMove: (Int, Int) -> Unit,
+    onRemove: () -> Unit,
+    onFocused: () -> Unit,
+) {
+    val title = window.mediaItem.mediaMetadata.title?.toString() ?: ""
+    val artist = window.mediaItem.mediaMetadata.artist?.toString() ?: ""
+    val thumbnailUri = window.mediaItem.mediaMetadata.artworkUri
+
+    // FocusRequesters for the 3 zones
+    val dragFocus = remember { FocusRequester() }
+    val contentFocus = remember { FocusRequester() }
+    val removeFocus = remember { FocusRequester() }
+
+    // If we are dragging, we force focus to the drag handle
+    LaunchedEffect(isDragging) {
+        if (isDragging) {
+            dragFocus.requestFocus()
+        }
+    }
+
+    // Row container
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(
+                if (isDragging) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                else if (isCurrent) MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
+                else Color.Transparent
+            )
+            .padding(4.dp)
+    ) {
+        // 1. Drag Handle (Left)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(if (isDragging) MaterialTheme.colorScheme.primary else Color.Transparent)
+                .focusRequester(dragFocus)
+                .onFocusChanged { if (it.isFocused) onFocused() }
+                .focusable()
+                .onKeyEvent { keyEvent ->
+                    if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
+                    when (keyEvent.nativeKeyEvent.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            if (!isDragging) { contentFocus.requestFocus(); true } else true
+                        }
+                        KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                            if (isDragging) onExitDrag() else onEnterDrag()
+                            true
+                        }
+                        KeyEvent.KEYCODE_DPAD_UP -> {
+                            if (isDragging) {
+                                if (index > 0) onMove(index, index - 1)
+                                true
+                            } else false
+                        }
+                        KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            if (isDragging) {
+                                if (index < totalItems - 1) onMove(index, index + 1)
+                                true
+                            } else false
+                        }
+                        KeyEvent.KEYCODE_BACK -> {
+                            if (isDragging) { onExitDrag(); true } else false
+                        }
+                        else -> false
+                    }
+                }
+                .clickable { if (isDragging) onExitDrag() else onEnterDrag() }
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.drag_handle),
+                contentDescription = "Reorder",
+                tint = if (isDragging) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        Spacer(Modifier.width(8.dp))
+
+        // 2. Content (Center) - Plays on click
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(6.dp))
+                .focusRequester(contentFocus)
+                .onFocusChanged { if (it.isFocused) onFocused() }
+                .focusable()
+                .onKeyEvent { keyEvent ->
+                    if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
+                    when (keyEvent.nativeKeyEvent.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_LEFT -> { dragFocus.requestFocus(); true }
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> { removeFocus.requestFocus(); true }
+                        KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> { onPlay(); true }
+                        else -> false
+                    }
+                }
+                .clickable { onPlay() }
+                .padding(8.dp)
+                .background(
+                    // Visual feedback for focus state is handled by the system focus highlight usually,
+                    // but we can add custom background if needed.
+                    // For now, let generic Android TV focus highlight do its job on the clipped row.
+                    Color.Transparent 
+                )
+        ) {
+            // Index Number
+            Text(
+                text = "${index + 1}",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.5f),
+                modifier = Modifier.width(32.dp)
+            )
+            
+            // Thumbnail
+            if (thumbnailUri != null) {
+                AsyncImage(
+                    model = thumbnailUri,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp))
+                )
+            } else {
+                Box(Modifier.size(40.dp).background(Color.DarkGray, RoundedCornerShape(4.dp)))
+            }
+            
+            Spacer(Modifier.width(12.dp))
+            
+            // Title & Artist
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (artist.isNotEmpty()) {
+                    Text(
+                        text = artist,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.width(8.dp))
+
+        // 3. Remove Button (Right)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .focusRequester(removeFocus)
+                .onFocusChanged { if (it.isFocused) onFocused() }
+                .focusable()
+                .onKeyEvent { keyEvent ->
+                    if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
+                    when (keyEvent.nativeKeyEvent.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_LEFT -> { contentFocus.requestFocus(); true }
+                        KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> { onRemove(); true }
+                        else -> false
+                    }
+                }
+                .clickable { onRemove() }
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.close),
+                contentDescription = "Remove",
+                tint = Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

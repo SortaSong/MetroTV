@@ -40,6 +40,7 @@ All new TV-specific UI components are isolated in the `ui/tv` package to minimiz
 
 *   **`TvQueueScreen.kt`**:
     *   **Focus Management**: A specialized list where `userScrollEnabled` is disabled, and scrolling is handled programmatically via `FocusRequester` and `onKeyEvent` to ensure the selected item stays centered and focus never gets lost.
+    *   **Queue Editing**: Added full support for drag-and-drop reordering (D-pad Up/Down in "Move Mode") and track removal via dedicated buttons in each list item.
 
 *   **`TvUtils.kt`**:
     *   Helper class for detecting TV configuration (`UiModeManager.currentModeType == UI_MODE_TYPE_TELEVISION`).
