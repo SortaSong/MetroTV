@@ -1,12 +1,32 @@
 <div align="center">
 <img src="https://github.com/MetrolistGroup/Metrolist/blob/main/fastlane/metadata/android/en-US/images/icon.png" width="160" height="160" style="display: block; margin: 0 auto"/>
-<h1>Metrolist</h1>
-<p>YouTube Music client for Android</p>
+<h1>Metrolist (MetroTV)</h1>
+<p>YouTube Music client for Android and Android TV</p>
+
+<div style="padding: 16px; margin: 16px 0; background-color: #E3F2FD; border-left: 6px solid #2196F3; border-radius: 4px;">
+<h2 style="margin: 0;"><strong>📺 MetroTV Edition</strong></h2>
+This is a fork of Metrolist optimized for Android TV, branded as <strong>MetroTV</strong>. It features a dedicated TV interface designed for D-pad navigation and large screens.
+</div>
 
 <div style="padding: 16px; margin: 16px 0; background-color: #FFFBE5; border-left: 6px solid #FFC107; border-radius: 4px;">
 <h2 style="margin: 0;"><strong>⚠Warning</strong></h2>
 If you're in a region where YouTube Music is not supported, you won't be able to use this app <strong>unless</strong> you have a proxy or VPN to connect to a YTM-supported region.
 </div>
+
+<h1>TV Controls</h1>
+MetroTV is designed to be used with a standard Android TV remote:
+
+- **Navigation**: D-pad Up/Down/Left/Right to navigate the interface.
+- **Select/Enter**: Select items or play songs.
+- **Player Controls**:
+    - **Center (Select)**: Toggle Play/Pause.
+    - **Left/Right**: Seek backward/forward 10 seconds.
+    - **Hold Left/Right (5s)**: Skip to Previous/Next track (visual arc indicator).
+    - **Up (Single Click)**: Open Queue / Playlist view.
+    - **Up (Double Click)**: Like/Unlike the current song.
+    - **Down (Single Click)**: Toggle Shuffle.
+    - **Down (Double Click)**: Cycle Repeat modes (Off -> All -> One).
+    - **Back**: Minimize player to background / Go back.
 
 <h1>Screenshots</h1>
 
