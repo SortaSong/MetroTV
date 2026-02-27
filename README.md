@@ -5,27 +5,24 @@
 
 [![Release](https://img.shields.io/github/v/release/MetrolistGroup/Metrolist?label=MetroTV&style=for-the-badge)](https://github.com/MetrolistGroup/Metrolist/releases)
 
-<div style="padding: 16px; margin: 16px 0; background-color: #E3F2FD; border-left: 6px solid #2196F3; border-radius: 4px; text-align: left;">
-<h3 style="margin: 0;"><strong>📺 About this Fork</strong></h3>
-<p><strong>MetroTV</strong> is a fork of <a href="https://github.com/MetrolistGroup/Metrolist">Metrolist</a>, specifically modified to provide a native 10-foot UI experience for Android TV devices. While the original app is fantastic for mobile, this fork adds:</p>
-<ul>
-    <li>Full D-pad navigation support (Except login and settings)</li>
-    <li>TV-specific layouts (Side Navigation Rail, Large Album Art)</li>
-    <li>Remote control shortcuts</li>
-    <li>"Keep Screen On" support for TV playback</li>
-</ul>
-<p>Based on Metrolist commit <code>7fb3f5e2</code> (dev branch).</p>
-</div>
+> [!NOTE]
+> **📺 About this Fork**
+>
+> **MetroTV** is a fork of [Metrolist](https://github.com/MetrolistGroup/Metrolist), specifically modified to provide a native 10-foot UI experience for Android TV devices. While the original app is fantastic for mobile, this fork adds:
+> - Full D-pad navigation support (except login and settings)
+> - TV-specific layouts (Side Navigation Rail, Large Album Art)
+> - Remote control shortcuts
+> - "Keep Screen On" support for TV playback
+>
+> Based on Metrolist commit `7fb3f5e2` (dev branch).
 
-<div style="padding: 16px; margin: 16px 0; background-color: #FFFBE5; border-left: 6px solid #FFC107; border-radius: 4px; text-align: left;">
-<h3 style="margin: 0;"><strong>⚠ Warning</strong></h3>
-If you're in a region where YouTube Music is not supported, you won't be able to use this app <strong>unless</strong> you have a proxy or VPN to connect to a YTM-supported region.
-</div>
+> [!WARNING]
+> If you're in a region where YouTube Music is not supported, you won't be able to use this app **unless** you have a proxy or VPN to connect to a YTM-supported region.
 
-<div style="padding: 16px; margin: 16px 0; background-color: #E8F5E9; border-left: 6px solid #4CAF50; border-radius: 4px; text-align: left;">
-<h3 style="margin: 0;"><strong>🖱️ Mouse Required for Login</strong></h3>
-While the main interface is fully optimized for TV remotes, the Google Login screen uses a web view that requires a <strong>mouse</strong> or air mouse to interact with. You can connect a USB mouse or use a remote app on your phone (like Google TV app) to complete the login process.
-</div>
+> [!IMPORTANT]
+> **🖱️ Mouse Required for Login**
+>
+> While the main interface is fully optimized for TV remotes, the Google Login screen uses a web view that requires a **mouse** or air mouse to interact with. You can connect a USB mouse or use a remote app on your phone (like the Google TV app) to complete the login process.
 
 </div>
 
@@ -44,6 +41,33 @@ Designed for standard Android TV remotes:
 | **Down** (Single Click) | Toggle Shuffle |
 | **Down** (Double Click) | Cycle Repeat Mode |
 | **Back** | Minimize player / Go back |
+
+## 🎵 Queue Editor
+
+Open the queue by pressing **Up** once from the player screen. Each row in the queue has three interactive zones, navigated with **Left / Right**:
+
+| Zone | Highlight | Action on Center/OK |
+| :--- | :--- | :--- |
+| **Song** (leftmost) | 🟢 Green | Play track & close queue |
+| **Drag Handle** (middle) | 🟡 Yellow | Enter / exit drag mode |
+| **Remove Button** (right) | 🔴 Red | Remove track from queue |
+
+### Navigation
+
+| Input | Result |
+| :--- | :--- |
+| **Right** from Song | Move focus to Drag Handle |
+| **Right** from Drag Handle | Move focus to Remove Button |
+| **Left** from Remove Button | Move focus to Drag Handle |
+| **Left** from Drag Handle | Move focus to Song |
+| **Up / Down** | Move to the same zone in the row above / below |
+
+### Reordering Tracks
+
+1. Navigate to the **Drag Handle** (yellow) of the track you want to move.
+2. Press **Center / OK** — the handle turns to the accent color, indicating **drag mode**.
+3. Press **Up / Down** to move the track to its new position.
+4. Press **Center / OK** or **Back** to drop the track and exit drag mode.
 
 ## 📥 Download
 
