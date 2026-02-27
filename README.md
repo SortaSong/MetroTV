@@ -9,7 +9,7 @@
 <h3 style="margin: 0;"><strong>📺 About this Fork</strong></h3>
 <p><strong>MetroTV</strong> is a fork of <a href="https://github.com/MetrolistGroup/Metrolist">Metrolist</a>, specifically modified to provide a native 10-foot UI experience for Android TV devices. While the original app is fantastic for mobile, this fork adds:</p>
 <ul>
-    <li>Full D-pad navigation support</li>
+    <li>Full D-pad navigation support (Except login and settings)</li>
     <li>TV-specific layouts (Side Navigation Rail, Large Album Art)</li>
     <li>Remote control shortcuts</li>
     <li>"Keep Screen On" support for TV playback</li>
@@ -44,7 +44,7 @@ Designed for standard Android TV remotes:
 
 MetroTV builds are available exclusively via **GitHub Releases**.
 
-[**Download Latest Release**](https://github.com/MetrolistGroup/Metrolist/releases)
+[**Download Latest Release**](../../releases)
 
 > Note: The package name is `com.metrotv.music`, allowing you to install it alongside the original Metrolist app.
 
