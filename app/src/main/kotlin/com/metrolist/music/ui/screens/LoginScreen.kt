@@ -13,6 +13,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
 import com.metrolist.innertube.YouTube
@@ -65,15 +67,19 @@ fun LoginScreen(
     var hasCompletedLogin by remember { mutableStateOf(false) }
 
     var webView: WebView? = null
-
-    AndroidView(
-        modifier = Modifier
-            .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
-            .fillMaxSize(),
-        factory = { webViewContext ->
-            WebView(webViewContext).apply {
-                webViewClient = object : WebViewClient() {
-                    override fun onPageFinished(view: WebView, url: String?) {
+    
+    androidx.compose.foundation.layout.Box(modifier = Modifier
+        .fillMaxSize()
+        .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
+    ) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { webViewContext ->
+                WebView(webViewContext).apply {
+                    // Force software rendering to avoid black WebView on some devices/emulators
+                    setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
+                    webViewClient = object : WebViewClient() {
+                        override fun onPageFinished(view: WebView, url: String?) {
                         loadUrl("javascript:Android.onRetrieveVisitorData(window.yt.config_.VISITOR_DATA)")
                         loadUrl("javascript:Android.onRetrieveDataSyncId(window.yt.config_.DATASYNC_ID)")
 
@@ -120,6 +126,9 @@ fun LoginScreen(
                             }
                         }
                     }
+                    override fun onReceivedError(view: WebView, errorCode: Int, description: String?, failingUrl: String?) {
+                        Timber.e("WebView error $errorCode: $description for $failingUrl")
+                    }
                 }
                 settings.apply {
                     javaScriptEnabled = true
@@ -164,5 +173,6 @@ fun LoginScreen(
 
     BackHandler(enabled = webView?.canGoBack() == true) {
         webView?.goBack()
+    }
     }
 }
