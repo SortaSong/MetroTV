@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -238,57 +239,7 @@ fun TvQueueItem(
             )
             .padding(4.dp)
     ) {
-        // 1. Drag Handle (Left)
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(if (isDragging) MaterialTheme.colorScheme.primary else Color.Transparent)
-                .focusRequester(dragFocus)
-                .onFocusChanged { if (it.isFocused) onFocused() }
-                .focusable()
-                .onKeyEvent { keyEvent ->
-                    if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
-                    when (keyEvent.nativeKeyEvent.keyCode) {
-                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                            if (!isDragging) { contentFocus.requestFocus(); true } else true
-                        }
-                        KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                            if (isDragging) onExitDrag() else onEnterDrag()
-                            true
-                        }
-                        KeyEvent.KEYCODE_DPAD_UP -> {
-                            if (isDragging) {
-                                if (index > 0) onMove(index, index - 1)
-                                true
-                            } else false
-                        }
-                        KeyEvent.KEYCODE_DPAD_DOWN -> {
-                            if (isDragging) {
-                                if (index < totalItems - 1) onMove(index, index + 1)
-                                true
-                            } else false
-                        }
-                        KeyEvent.KEYCODE_BACK -> {
-                            if (isDragging) { onExitDrag(); true } else false
-                        }
-                        else -> false
-                    }
-                }
-                .clickable { if (isDragging) onExitDrag() else onEnterDrag() }
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.drag_handle),
-                contentDescription = "Reorder",
-                tint = if (isDragging) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.7f),
-                modifier = Modifier.size(20.dp)
-            )
-        }
-
-        Spacer(Modifier.width(8.dp))
-
-        // 2. Content (Center) - Plays on click
+        // 1. Content (Left/Center) - Plays on click - NOW FIRST
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -300,20 +251,14 @@ fun TvQueueItem(
                 .onKeyEvent { keyEvent ->
                     if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
                     when (keyEvent.nativeKeyEvent.keyCode) {
-                        KeyEvent.KEYCODE_DPAD_LEFT -> { dragFocus.requestFocus(); true }
-                        KeyEvent.KEYCODE_DPAD_RIGHT -> { removeFocus.requestFocus(); true }
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> { dragFocus.requestFocus(); true }
                         KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> { onPlay(); true }
                         else -> false
                     }
                 }
                 .clickable { onPlay() }
                 .padding(8.dp)
-                .background(
-                    // Visual feedback for focus state is handled by the system focus highlight usually,
-                    // but we can add custom background if needed.
-                    // For now, let generic Android TV focus highlight do its job on the clipped row.
-                    Color.Transparent 
-                )
+                .background(Color.Transparent)
         ) {
             // Index Number
             Text(
@@ -360,6 +305,55 @@ fun TvQueueItem(
 
         Spacer(Modifier.width(8.dp))
 
+        // 2. Drag Handle (Middle)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(if (isDragging) MaterialTheme.colorScheme.primary else Color.Transparent)
+                .focusRequester(dragFocus)
+                .onFocusChanged { if (it.isFocused) onFocused() }
+                .focusable()
+                .onKeyEvent { keyEvent ->
+                    if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
+                    when (keyEvent.nativeKeyEvent.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_LEFT -> { contentFocus.requestFocus(); true }
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> { removeFocus.requestFocus(); true }
+                        KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                            if (isDragging) onExitDrag() else onEnterDrag()
+                            true
+                        }
+                        KeyEvent.KEYCODE_DPAD_UP -> {
+                            if (isDragging) {
+                                if (index > 0) onMove(index, index - 1)
+                                true
+                            } else false
+                        }
+                        KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            if (isDragging) {
+                                if (index < totalItems - 1) onMove(index, index + 1)
+                                true
+                            } else false
+                        }
+                        KeyEvent.KEYCODE_BACK -> {
+                            if (isDragging) { onExitDrag(); true } else false
+                        }
+                        else -> false
+                    }
+                }
+                .clickable { if (isDragging) onExitDrag() else onEnterDrag() }
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.drag_handle),
+                contentDescription = "Reorder",
+                tint = if (isDragging) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        
+        Spacer(Modifier.width(8.dp))
+
         // 3. Remove Button (Right)
         Box(
             contentAlignment = Alignment.Center,
@@ -372,7 +366,7 @@ fun TvQueueItem(
                 .onKeyEvent { keyEvent ->
                     if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
                     when (keyEvent.nativeKeyEvent.keyCode) {
-                        KeyEvent.KEYCODE_DPAD_LEFT -> { contentFocus.requestFocus(); true }
+                        KeyEvent.KEYCODE_DPAD_LEFT -> { dragFocus.requestFocus(); true }
                         KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> { onRemove(); true }
                         else -> false
                     }
