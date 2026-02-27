@@ -31,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -95,9 +96,14 @@ fun TvQueueScreen(navController: NavController) {
 
     // Track which ROW currently has focus (to keep it visible)
     var focusedRowIndex by remember { mutableIntStateOf(currentIndex.coerceIn(0, (currentQueue.size - 1).coerceAtLeast(0))) }
+    var focusedColIndex by remember { mutableIntStateOf(0) } // 0=song, 1=drag, 2=remove
+
+    LaunchedEffect(currentQueue.size) {
+        focusedRowIndex = focusedRowIndex.coerceIn(0, (currentQueue.size - 1).coerceAtLeast(0))
+    }
 
     LaunchedEffect(focusedRowIndex) {
-        listState.animateScrollToItem(focusedRowIndex)
+        listState.animateScrollToItem(maxOf(0, focusedRowIndex - 3))
     }
 
     // Scroll to current track on first load
@@ -168,6 +174,13 @@ fun TvQueueScreen(navController: NavController) {
                         isCurrent = isCurrent,
                         isDragging = isDragging,
                         totalItems = currentQueue.size,
+                        isFocusedRow = (idx == focusedRowIndex),
+                        focusedCol = focusedColIndex,
+                        onFocusedCol = { col -> focusedColIndex = col },
+                        onMoveRow = { direction ->
+                            val newRow = (focusedRowIndex + direction).coerceIn(0, (currentQueue.size - 1).coerceAtLeast(0))
+                            if (newRow != focusedRowIndex) focusedRowIndex = newRow
+                        },
                         onPlay = {
                             playerConnection.player.seekToDefaultPosition(idx)
                             navController.navigateUp()
@@ -202,6 +215,10 @@ fun TvQueueItem(
     isCurrent: Boolean,
     isDragging: Boolean,
     totalItems: Int,
+    isFocusedRow: Boolean,
+    focusedCol: Int,           // 0=song, 1=drag, 2=remove
+    onFocusedCol: (Int) -> Unit,
+    onMoveRow: (Int) -> Unit,
     onPlay: () -> Unit,
     onEnterDrag: () -> Unit,
     onExitDrag: () -> Unit,
@@ -217,6 +234,20 @@ fun TvQueueItem(
     val dragFocus = remember { FocusRequester() }
     val contentFocus = remember { FocusRequester() }
     val removeFocus = remember { FocusRequester() }
+
+    var contentFocused by remember { mutableStateOf(false) }
+    var dragFocused by remember { mutableStateOf(false) }
+    var removeFocused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isFocusedRow, focusedCol) {
+        if (isFocusedRow) {
+            when (focusedCol) {
+                0 -> contentFocus.requestFocus()
+                1 -> dragFocus.requestFocus()
+                2 -> removeFocus.requestFocus()
+            }
+        }
+    }
 
     // If we are dragging, we force focus to the drag handle
     LaunchedEffect(isDragging) {
@@ -245,20 +276,28 @@ fun TvQueueItem(
             modifier = Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(6.dp))
+                .background(if (contentFocused) Color(0xFF90EE90).copy(alpha = 0.4f) else Color.Transparent)
                 .focusRequester(contentFocus)
-                .onFocusChanged { if (it.isFocused) onFocused() }
+                .onFocusChanged { state ->
+                    contentFocused = state.isFocused
+                    if (state.isFocused) {
+                        onFocused()
+                        onFocusedCol(0)
+                    }
+                }
                 .focusable()
                 .onKeyEvent { keyEvent ->
                     if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
                     when (keyEvent.nativeKeyEvent.keyCode) {
                         KeyEvent.KEYCODE_DPAD_RIGHT -> { dragFocus.requestFocus(); true }
+                        KeyEvent.KEYCODE_DPAD_UP -> { onMoveRow(-1); true }
+                        KeyEvent.KEYCODE_DPAD_DOWN -> { onMoveRow(1); true }
                         KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> { onPlay(); true }
                         else -> false
                     }
                 }
                 .clickable { onPlay() }
                 .padding(8.dp)
-                .background(Color.Transparent)
         ) {
             // Index Number
             Text(
@@ -311,30 +350,46 @@ fun TvQueueItem(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(if (isDragging) MaterialTheme.colorScheme.primary else Color.Transparent)
+                .background(
+                    when {
+                        isDragging -> MaterialTheme.colorScheme.primary
+                        dragFocused -> Color(0xFFFFEB3B).copy(alpha = 0.7f)
+                        else -> Color.Transparent
+                    }
+                )
                 .focusRequester(dragFocus)
-                .onFocusChanged { if (it.isFocused) onFocused() }
+                .onFocusChanged { state ->
+                    dragFocused = state.isFocused
+                    if (state.isFocused) {
+                        onFocused()
+                        onFocusedCol(1)
+                    }
+                }
                 .focusable()
                 .onKeyEvent { keyEvent ->
                     if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
                     when (keyEvent.nativeKeyEvent.keyCode) {
                         KeyEvent.KEYCODE_DPAD_LEFT -> { contentFocus.requestFocus(); true }
                         KeyEvent.KEYCODE_DPAD_RIGHT -> { removeFocus.requestFocus(); true }
-                        KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                            if (isDragging) onExitDrag() else onEnterDrag()
-                            true
-                        }
                         KeyEvent.KEYCODE_DPAD_UP -> {
                             if (isDragging) {
                                 if (index > 0) onMove(index, index - 1)
-                                true
-                            } else false
+                            } else {
+                                onMoveRow(-1)
+                            }
+                            true
                         }
                         KeyEvent.KEYCODE_DPAD_DOWN -> {
                             if (isDragging) {
                                 if (index < totalItems - 1) onMove(index, index + 1)
-                                true
-                            } else false
+                            } else {
+                                onMoveRow(1)
+                            }
+                            true
+                        }
+                        KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                            if (isDragging) onExitDrag() else onEnterDrag()
+                            true
                         }
                         KeyEvent.KEYCODE_BACK -> {
                             if (isDragging) { onExitDrag(); true } else false
@@ -347,7 +402,11 @@ fun TvQueueItem(
             Icon(
                 painter = painterResource(R.drawable.drag_handle),
                 contentDescription = "Reorder",
-                tint = if (isDragging) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.7f),
+                tint = when {
+                    isDragging -> MaterialTheme.colorScheme.onPrimary
+                    dragFocused -> Color.Black
+                    else -> Color.White.copy(alpha = 0.7f)
+                },
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -360,13 +419,22 @@ fun TvQueueItem(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
+                .background(if (removeFocused) Color(0xFFEF5350).copy(alpha = 0.8f) else Color.Transparent)
                 .focusRequester(removeFocus)
-                .onFocusChanged { if (it.isFocused) onFocused() }
+                .onFocusChanged { state ->
+                    removeFocused = state.isFocused
+                    if (state.isFocused) {
+                        onFocused()
+                        onFocusedCol(2)
+                    }
+                }
                 .focusable()
                 .onKeyEvent { keyEvent ->
                     if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
                     when (keyEvent.nativeKeyEvent.keyCode) {
                         KeyEvent.KEYCODE_DPAD_LEFT -> { dragFocus.requestFocus(); true }
+                        KeyEvent.KEYCODE_DPAD_UP -> { onMoveRow(-1); true }
+                        KeyEvent.KEYCODE_DPAD_DOWN -> { onMoveRow(1); true }
                         KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> { onRemove(); true }
                         else -> false
                     }
@@ -376,7 +444,7 @@ fun TvQueueItem(
             Icon(
                 painter = painterResource(R.drawable.close),
                 contentDescription = "Remove",
-                tint = Color.White.copy(alpha = 0.7f),
+                tint = if (removeFocused) Color.White else Color.White.copy(alpha = 0.7f),
                 modifier = Modifier.size(20.dp)
             )
         }
